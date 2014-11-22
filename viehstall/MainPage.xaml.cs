@@ -11,20 +11,13 @@ using Windows.Storage.Pickers;
 using Windows.UI.Xaml.Media.Imaging;
 using System.Threading.Tasks;
 
-// The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=234238
-
 namespace viehstall
 {
-    /// <summary>
-    /// An empty page that can be used on its own or navigated to within a Frame.
-    /// </summary>
     public sealed partial class MainPage : Page
     {
-        private const int MaxFilesInDeleteHistory = 10;
-        private readonly List<string> Filenames = new List<string>();
-        private readonly List<string> FilesToDelete = new List<string>();
-        private string CurrentDirectory;
+        private readonly BitmapCache Images = new BitmapCache();
         private int CurrentIndex;
+
         private readonly GestureHandling GestureHandling;
 
         public MainPage()
@@ -40,7 +33,6 @@ namespace viehstall
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-
             Window.Current.CoreWindow.KeyDown += CoreWindow_KeyDown;
             base.OnNavigatedTo(e);
         }
@@ -65,15 +57,7 @@ namespace viehstall
             }
             else if (args.VirtualKey == VirtualKey.D)
             {
-                DeleteCurrentFileAndGoToNextOne();
-            }
-        }
-
-        private bool HasAnyFiles
-        {
-            get
-            {
-                return Filenames.Count > 0;
+                //DeleteCurrentFileAndGoToNextOne();
             }
         }
 
@@ -85,7 +69,7 @@ namespace viehstall
 
         private void GestureHandling_DownSwipe()
         {
-            DeleteCurrentFileAndGoToNextOne();
+            //DeleteCurrentFileAndGoToNextOne();
         }
 
         private void GestureHandling_LeftSwipe()
@@ -105,33 +89,25 @@ namespace viehstall
 
         private async void MainPage_Loaded(object sender, RoutedEventArgs e)
         {
-            await SwitchToFolder(KnownFolders.PicturesLibrary);
+            await SwitchToFolder(await StorageFolder.GetFolderFromPathAsync(@"C:\Users\Gerson\Pictures\Wallpapers"));
         }
 
         private async Task<bool> SwitchToFolder(StorageFolder folder)
         {
-            Filenames.Clear();
-            CurrentDirectory = folder.Path;
+            Images.Clear();
             foreach (StorageFile file in await folder.GetFilesAsync())
             {
-                // this is a hack: for the default folder, windows is shitty enough not to return the correct path
-                // instead, an empty path is returned, so we need to manually determine it 
-                if (string.IsNullOrEmpty(CurrentDirectory))
-                {
-                    CurrentDirectory = Path.GetDirectoryName(file.Path);
-                }
-
-                Filenames.Add(file.Name);
+                Images.Add(file.Path);
             }
-            if(HasAnyFiles)
+            if(Images.HasAny)
             {
                 ClearErrorMessage();
                 CurrentIndex = 0;
-                return await UpdateFileShown();
+                return await ShowCurrentImage();
             }
             else
             {
-                ShowErrorMessage("The directory '{0}' has no files", CurrentDirectory);
+                ShowErrorMessage("The directory '{0}' has no files", folder.Path);
                 return false;
             }
         }
@@ -147,21 +123,12 @@ namespace viehstall
             ImageError.Visibility = Visibility.Visible;
         }
 
-        private async Task<bool> UpdateFileShown()
+        private async Task<bool> ShowCurrentImage()
         {
             try
             {
                 ClearErrorMessage();
-                string currentFilename = Filenames[CurrentIndex];
-                string currentPathname = Path.Combine(CurrentDirectory, currentFilename);
-                Debug.WriteLine("About to load '{0}'", currentPathname);
-
-                StorageFile fileObject = await StorageFile.GetFileFromPathAsync(currentPathname);
-
-                MyImage.Source = await LoadImage(fileObject);
-
-                // preliminary
-                ImageInfo.Text = string.Format("{0}/{1}: {2}", (CurrentIndex + 1), Filenames.Count, currentFilename);
+                MyImage.Source = await Images.GetBitmapAtIndex(CurrentIndex);
             }
             catch(Exception)
             {
@@ -173,51 +140,51 @@ namespace viehstall
 
         private async void GoToPreviousPicture()
         {
-            if (HasAnyFiles)
+            if (Images.HasAny)
             {
                 if (CurrentIndex > 0)
                 {
                     --CurrentIndex;
-                    await UpdateFileShown();
+                    await ShowCurrentImage();
                 }
             }
         }
 
         private async void GoToNextPicture()
         {
-            if (HasAnyFiles)
+            if (Images.HasAny)
             {
-                if (CurrentIndex < (Filenames.Count - 1))
+                if (CurrentIndex < (Images.Count - 1))
                 {
                     ++CurrentIndex;
-                    await UpdateFileShown();
+                    await ShowCurrentImage();
                 }
             }
         }
 
         private async void GoToFirstPicture()
         {
-            if (HasAnyFiles)
+            if (Images.HasAny)
             {
                 if (CurrentIndex != 0)
                 {
                     CurrentIndex = 0;
-                    await UpdateFileShown();
+                    await ShowCurrentImage();
                 }
             }
         }
         private async void GoToLastPicture()
         {
-            if (HasAnyFiles)
+            if (Images.HasAny)
             {
-                if (CurrentIndex < (Filenames.Count - 1))
+                if (CurrentIndex < (Images.Count - 1))
                 {
-                    CurrentIndex = Filenames.Count - 1;
-                    await UpdateFileShown();
+                    CurrentIndex = Images.Count - 1;
+                    await ShowCurrentImage();
                 }
             }
         }
-
+/*
         private async Task<bool> PhysicallyDeleteThisFile(string filename)
         {
             try
@@ -254,24 +221,17 @@ namespace viehstall
                     return;
                 }
             }
-            await UpdateFileShown();
+            await ShowCurrentImage();
             if (FilesToDelete.Count > MaxFilesInDeleteHistory)
             {
                 await PhysicallyDeleteThisFile(FilesToDelete[MaxFilesInDeleteHistory - 1]);
                 FilesToDelete.RemoveAt(MaxFilesInDeleteHistory - 1);
             }
-        }
-
-        private static async Task<BitmapImage> LoadImage(StorageFile file)
-        {
-            BitmapImage bitmapImage = new BitmapImage();
-            var stream = await file.OpenReadAsync();
-            await bitmapImage.SetSourceAsync(stream);
-            return bitmapImage;
-        }
+        }*/
 
         private async void Button_Click(object sender, RoutedEventArgs e)
         {
+            
             var folderPicker = new FolderPicker();
             folderPicker.FileTypeFilter.Add(".jpg");
             folderPicker.ViewMode = PickerViewMode.Thumbnail;
