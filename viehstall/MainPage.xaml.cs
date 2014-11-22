@@ -69,6 +69,14 @@ namespace viehstall
             }
         }
 
+        private bool HasAnyFiles
+        {
+            get
+            {
+                return Filenames.Count > 0;
+            }
+        }
+
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             Window.Current.CoreWindow.KeyDown -= CoreWindow_KeyDown;
@@ -115,57 +123,98 @@ namespace viehstall
 
                 Filenames.Add(file.Name);
             }
-            CurrentIndex = 0;
-            return await UpdateFileShown();
+            if(HasAnyFiles)
+            {
+                ClearErrorMessage();
+                CurrentIndex = 0;
+                return await UpdateFileShown();
+            }
+            else
+            {
+                ShowErrorMessage("The directory '{0}' has no files", CurrentDirectory);
+                return false;
+            }
+        }
+
+        private void ClearErrorMessage()
+        {
+            ImageError.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowErrorMessage(string msg, params object[] args)
+        {
+            ImageError.Text = string.Format(msg, args);
+            ImageError.Visibility = Visibility.Visible;
         }
 
         private async Task<bool> UpdateFileShown()
         {
-            string currentFilename = Filenames[CurrentIndex];
-            string currentPathname = Path.Combine(CurrentDirectory, currentFilename);
-            Debug.WriteLine("About to load '{0}'", currentPathname);
+            try
+            {
+                ClearErrorMessage();
+                string currentFilename = Filenames[CurrentIndex];
+                string currentPathname = Path.Combine(CurrentDirectory, currentFilename);
+                Debug.WriteLine("About to load '{0}'", currentPathname);
 
-            StorageFile fileObject = await StorageFile.GetFileFromPathAsync(currentPathname);
+                StorageFile fileObject = await StorageFile.GetFileFromPathAsync(currentPathname);
 
-            MyImage.Source = await LoadImage(fileObject);
+                MyImage.Source = await LoadImage(fileObject);
 
-            // preliminary
-            ImageInfo.Text = string.Format("{0}/{1}: {2}", (CurrentIndex + 1), Filenames.Count, currentFilename);
+                // preliminary
+                ImageInfo.Text = string.Format("{0}/{1}: {2}", (CurrentIndex + 1), Filenames.Count, currentFilename);
+            }
+            catch(Exception)
+            {
+                ShowErrorMessage("Unable to load current file... sorry!");
+                return false;
+            }
             return true;
         }
 
         private async void GoToPreviousPicture()
         {
-            if (CurrentIndex > 0)
+            if (HasAnyFiles)
             {
-                --CurrentIndex;
-                await UpdateFileShown();
+                if (CurrentIndex > 0)
+                {
+                    --CurrentIndex;
+                    await UpdateFileShown();
+                }
             }
         }
 
         private async void GoToNextPicture()
         {
-            if (CurrentIndex < (Filenames.Count - 1))
+            if (HasAnyFiles)
             {
-                ++CurrentIndex;
-                await UpdateFileShown();
+                if (CurrentIndex < (Filenames.Count - 1))
+                {
+                    ++CurrentIndex;
+                    await UpdateFileShown();
+                }
             }
         }
 
         private async void GoToFirstPicture()
         {
-            if (CurrentIndex != 0)
+            if (HasAnyFiles)
             {
-                CurrentIndex = 0;
-                await UpdateFileShown();
+                if (CurrentIndex != 0)
+                {
+                    CurrentIndex = 0;
+                    await UpdateFileShown();
+                }
             }
         }
         private async void GoToLastPicture()
         {
-            if (CurrentIndex < (Filenames.Count - 1))
+            if (HasAnyFiles)
             {
-                CurrentIndex = Filenames.Count - 1;
-                await UpdateFileShown();
+                if (CurrentIndex < (Filenames.Count - 1))
+                {
+                    CurrentIndex = Filenames.Count - 1;
+                    await UpdateFileShown();
+                }
             }
         }
 
@@ -187,6 +236,9 @@ namespace viehstall
 
         private async void DeleteCurrentFileAndGoToNextOne()
         {
+            // it could be that you want to delete a file that doesn't exist any more 
+            // (for example, you were already down to the last picture, and there was nothing to delete)
+
             FilesToDelete.Insert(0, Filenames[CurrentIndex]);
             Filenames.RemoveAt(CurrentIndex);
 
@@ -198,8 +250,7 @@ namespace viehstall
                 // if we have just removed the last file in the whole directory, we are in a bit of trouble...
                 if (CurrentIndex < 0)
                 {
-                    ImageError.Text = "TODO: implement situation where you want to delete the last file in a directory... NOT YET!";
-                    ImageError.Visibility = Visibility.Visible;
+                    ShowErrorMessage("Do you really want to delete the last file in a directory?");
                     return;
                 }
             }
