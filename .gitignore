@@ -1,3 +1,4 @@
 # git ignore file
 viehstall/obj/*
 *.suo
+viehstall/bin/*
