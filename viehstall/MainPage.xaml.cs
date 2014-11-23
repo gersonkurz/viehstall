@@ -77,10 +77,15 @@ namespace viehstall
 
         private async void MainPage_Loaded(object sender, RoutedEventArgs e)
         {
-            await SwitchToFolder(@"C:\Users\Gerson\Pictures\Test\1");
-
-            await Task.Delay(250);
-            FlipView_SelectionChanged(MyFlipView, null);
+            if( !await SwitchToFolder(@"C:\Users\Gerson\Pictures"))
+            {
+                ChangeFolder_Click(null, null);
+            }
+            else
+            {
+                await Task.Delay(250);
+                FlipView_SelectionChanged(MyFlipView, null);
+            }
         }
         
         private async Task<bool> PhysicallyDeleteThisFile(string filename)
@@ -171,18 +176,26 @@ namespace viehstall
 
         public async Task<bool> SwitchToFolder(StorageFolder folder)
         {
+            if (folder == null)
+                return false;
+
             var items = new ObservableCollection<PictureInfo>();
             foreach (StorageFile file in await folder.GetFilesAsync())
             {
                 items.Add(new PictureInfo(file.Path));
             }
+            if(items.Count == 0)
+            {
+                MyInfoText.Text = string.Format("Sorry, there are no pictures in '{0}'", folder.Path);
+                return false;
+            }
             ListOfPictures = items;
             MyFlipView.ItemsSource = items;
             return true;
         }
+
         private async void ChangeFolder_Click(object sender, RoutedEventArgs e)
         {
-
             var folderPicker = new FolderPicker();
             folderPicker.FileTypeFilter.Add(".jpg");
             folderPicker.ViewMode = PickerViewMode.Thumbnail;
@@ -190,7 +203,10 @@ namespace viehstall
             folderPicker.SettingsIdentifier = "FolderPicker";
 
             var folder = await folderPicker.PickSingleFolderAsync();
-            await SwitchToFolder(folder);
+            if (folder != null)
+            {
+                await SwitchToFolder(folder);
+            }
         }
 
         private async void DeleteButton_Click(object sender, RoutedEventArgs e)
@@ -199,10 +215,28 @@ namespace viehstall
             PictureInfo pi = ListOfPictures[index];
             DeletedPictures.Insert(0, pi);
             ListOfPictures.RemoveAt(index);
+            if (MaxFilesInDeleteHistory > 0)
+            {
+                UndoButton.IsEnabled = true;
+            }
             if (DeletedPictures.Count > MaxFilesInDeleteHistory)
             {
                 await PhysicallyDeleteThisFile(DeletedPictures[MaxFilesInDeleteHistory].Filename);
                 DeletedPictures.RemoveAt(MaxFilesInDeleteHistory);
+            }
+        }
+
+        private void UndoButton_Click(object sender, RoutedEventArgs e)
+        {
+            int index = MyFlipView.SelectedIndex;
+            PictureInfo pi = DeletedPictures[0];
+            ListOfPictures.Insert(index, pi);
+            DeletedPictures.RemoveAt(0);
+            MyFlipView.SelectedIndex = index;
+            
+            if (DeletedPictures.Count == 0)
+            {
+                UndoButton.IsEnabled = false;
             }
         }
 
