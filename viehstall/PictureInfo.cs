@@ -24,9 +24,12 @@ namespace viehstall
     public class PictureInfo : BindableBase
     {
         private readonly string Filename;
-        private BitmapImage PictureInMemory;
+        internal BitmapImage PictureInMemory;
         private Task<bool> Loader;
         private readonly int CurrentIndex;
+        private string _Description;
+
+        public static PictureInfo LastKnownPictureInfo;
 
         public override string ToString()
         {
@@ -50,6 +53,7 @@ namespace viehstall
                     }
                 }
                 Debug.WriteLine("Got {0} from memory", this);
+                LastKnownPictureInfo = this;
                 return PictureInMemory;
             }
             set
@@ -63,6 +67,18 @@ namespace viehstall
         {
             Filename = filename;
             CurrentIndex = index;
+            _Description = string.Format("{0}: not loaded yet", filename);
+        }
+
+        public string Description
+        {
+            get {
+                return _Description;
+            }
+            set
+            {
+                SetProperty(ref _Description, value);
+            }
         }
 
         private async Task<bool> LoadPictureAsync()
@@ -73,6 +89,7 @@ namespace viehstall
             var stream = await file.OpenReadAsync();
             await picture.SetSourceAsync(stream);
             Picture = picture;
+            _Description = string.Format("{0}: {1} x {2}", Filename, picture.PixelWidth, picture.PixelHeight);
             Debug.WriteLine("{0} loaded after {1}", this, DateTime.Now - start);
             Loader = null;
             return true;

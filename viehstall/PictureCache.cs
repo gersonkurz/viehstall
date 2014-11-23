@@ -25,8 +25,8 @@ namespace viehstall
         }
 
         private int CurrentIndex = -1;
-        private int CacheWindowStart = -1;
-        private int CacheWindowEnd = -1;
+        public int CacheWindowStart { get; private set; }
+        public int CacheWindowEnd { get; private set; }
         private const int CACHE_WINDOW_SIZE = 8;
 
         public async Task<bool> GoTo(int newIndex)
@@ -65,22 +65,13 @@ namespace viehstall
             }
 
             // invalidate old cache that is outside of our range
-            bool needCollect = false;
             for (int index = CacheWindowStart; index < CacheWindowEnd; ++index)
             {
                 if ((index < newCacheStart) || (index >= newCacheEnd))
                 {
-                    LoadState state = ListOfPictures[index].ReleaseCachedImage();
-                    if(state == LoadState.WasLoaded)
-                    {
-
-                        needCollect = true;
-                    }
-                    
+                    ListOfPictures[index].ReleaseCachedImage();
                 }
             }
-            if(needCollect)
-            GC.Collect();
             CacheWindowStart = newCacheStart;
             CacheWindowEnd = newCacheEnd;
             CurrentIndex = newIndex;

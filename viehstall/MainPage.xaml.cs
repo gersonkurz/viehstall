@@ -12,6 +12,8 @@ using Windows.UI.Xaml.Media.Imaging;
 using System.Threading.Tasks;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Input;
+using Windows.Foundation;
+using Windows.Graphics.Display;
 
 namespace viehstall
 {
@@ -54,19 +56,23 @@ namespace viehstall
 
         private async void FlipView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            Debug.WriteLine("BEGIN FlipView_SelectionChanged");
+            Debug.Assert(sender == MyFlipView);
             await MyPictureCache.GoTo(MyFlipView.SelectedIndex);
-            // thanks, http://stackoverflow.com/questions/14667556/a-simple-photo-album-with-pinch-and-zoom-using-flipview
-            var flipViewItem = MyFlipView.ContainerFromIndex(MyFlipView.SelectedIndex);
-            ResizeImageToFitScreen(FindFirstElementInVisualTree<ScrollViewer>(flipViewItem));
+
+
+            for(int i = MyPictureCache.CacheWindowStart; i < MyPictureCache.CacheWindowEnd; ++i )
+            {
+                var flipViewItem = MyFlipView.ContainerFromIndex(i);
+                ResizeImageToFit(FindFirstElementInVisualTree<ScrollViewer>(flipViewItem));
+            }
+            Debug.WriteLine("END FlipView_SelectionChanged");
         }
 
         private async void MainPage_Loaded(object sender, RoutedEventArgs e)
         {
             await MyPictureCache.SwitchToFolder(@"C:\Users\Gerson\Pictures\Test\1");
             MyFlipView.ItemsSource = MyPictureCache.ListOfPictures;
-            var flipViewItem = MyFlipView.ContainerFromIndex(MyFlipView.SelectedIndex);
-            ResizeImageToFitScreen(FindFirstElementInVisualTree<ScrollViewer>(flipViewItem));
-
         }
         
 /*
@@ -127,53 +133,51 @@ namespace viehstall
             await MyPictureCache.SwitchToFolder(folder);
         }
 
-        private void ResizeImageToFitScreen(ScrollViewer scroll)
+        private void ResizeImageToFit(ScrollViewer sv)
         {
-            if (scroll != null)
+            if (sv == null)
+                return;
+
+            var image = FindFirstElementInVisualTree<Image>(sv);
+            if (image == null)
+                return;
+
+            var scale = Window.Current.Bounds;
+            double factor = 1.0;
+            if (scale.Width > scale.Height)
             {
-                var period = TimeSpan.FromMilliseconds(10);
-                float imageWidth = PictureInfo.LastKnownPictureInfo.PictureInMemory.PixelWidth;
-                float imageHeight = PictureInfo.LastKnownPictureInfo.PictureInMemory.PixelHeight;
-
-                float ScreenWidth = 0.90f * (float)this.ActualWidth;
-                float ScreenHeight = 0.90f * (float)this.ActualHeight;
-
-                float factor = 1.0f;
-                if (ScreenWidth > ScreenHeight)
+                if (image.ActualWidth > scale.Width)
                 {
-                    if (imageWidth > ScreenWidth)
-                        factor = ScreenWidth / imageWidth;
-                    else
-                        factor = 0.95f;
+                    factor = scale.Height / image.ActualHeight;
                 }
                 else
                 {
-
-                    if (imageHeight > ScreenHeight)
-                        factor = ScreenHeight / imageHeight;
-                    else
-                        factor = 0.95f;
+                    factor = image.ActualHeight / scale.Height;
                 }
-                Debug.WriteLine("ZF {0} calculated", factor);
-
-                Windows.System.Threading.ThreadPoolTimer.CreateTimer(async (source) =>
-                {
-                    await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
-                    {
-                        var Succes = scroll.ChangeView(null, null, factor, true);
-                    });
-                }, period);
             }
-        }
-
-        void scroll_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            Debug.WriteLine("scroll: size changed");
+            else
+            {
+                if (image.ActualHeight > scale.Height)
+                {
+                    factor = scale.Width / image.ActualWidth;
+                }
+                else
+                {
+                    factor = image.ActualWidth / scale.Width;
+                }
+            }
+            float f = (float)factor;
+            if( f != sv.ZoomFactor)
+            {
+                sv.ZoomToFactor((float)factor);
+            }
         }
 
         private void ScrollViewer_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
         {
-            ResizeImageToFitScreen(sender as ScrollViewer);
+            Debug.WriteLine("BEGIN ScrollViewer_DoubleTapped");
+            ResizeImageToFit(sender as ScrollViewer);
+            Debug.WriteLine("END ScrollViewer_DoubleTapped");
         }
     }
 }

@@ -15,40 +15,24 @@
             </StackPanel>
         </AppBar>
     </Page.BottomAppBar>
-
-    <Grid Background="{StaticResource ApplicationPageBackgroundThemeBrush}">
-        <FlipView x:Name="MyFlipView" SelectionChanged="FlipView_SelectionChanged">
-
-            <FlipView.ItemTemplate>
-                <DataTemplate>
-                    <ScrollViewer 
-                        DoubleTapped="ScrollViewer_DoubleTapped"
-                        ZoomMode="Enabled" 
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        MinZoomFactor="0.1"
-                        MaxZoomFactor="5.0"
-                        Margin="0"
-                        VerticalScrollBarVisibility="Auto" 
-                        HorizontalScrollBarVisibility="Auto">
-                        <Grid>
-                            <Image Source="{Binding Picture}" 
-                                   Stretch="Uniform" 
-                                   Width="{Binding ActualWidth, ElementName=Picture}"
-                                   Height="{Binding ActualHeight, ElementName=Picture}"
-                                   VerticalAlignment="Center" 
-                                   HorizontalAlignment="Center"/>
-                            <Border Background="#A5000000" Height="60" VerticalAlignment="Bottom">
-                                <TextBlock Name="MyInfoText" Text="Hello, World" FontSize="24" Foreground="#CCFFFFFF" Padding="15,20"/>
-                            </Border>
-                        </Grid>
-                        
+    <FlipView x:Name="MyFlipView" SelectionChanged="FlipView_SelectionChanged">
+        <FlipView.ItemTemplate>
+            <DataTemplate>
+                <Grid>
+                    <ScrollViewer HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto"
+                                  DoubleTapped="ScrollViewer_DoubleTapped">
+                        <Image Source="{Binding Picture}" 
+                                    VerticalAlignment="Center" 
+                                    HorizontalAlignment="Center"/>
                     </ScrollViewer>
-                </DataTemplate>
-            </FlipView.ItemTemplate>
-
-        </FlipView>
-    </Grid>
-
-
+                    <Border Background="#A5000000" Height="60" VerticalAlignment="Bottom">
+                        <TextBlock Text="{Binding Description}" FontSize="24" Foreground="#CCFFFFFF" Padding="15,20"/>
+                    </Border>
+                </Grid>
+            </DataTemplate>
+        </FlipView.ItemTemplate>
+    </FlipView>
 </Page>
