@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest">
-  <Identity Name="158f9abc-8820-4879-a275-272b07793457" Publisher="CN=Gerson" Version="1.0.0.0" />
+  <Identity Name="158f9abc-8820-4879-a275-272b07793457" Publisher="CN=Gerson" Version="1.0.0.1" />
   <Properties>
     <DisplayName>viehstall</DisplayName>
     <PublisherDisplayName>Gerson</PublisherDisplayName>

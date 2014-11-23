@@ -14,13 +14,16 @@ using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Input;
 using Windows.Foundation;
 using Windows.Graphics.Display;
+using System.Collections.ObjectModel;
 
 namespace viehstall
 {
     public sealed partial class MainPage : Page
     {
-        public PictureCache MyPictureCache = new PictureCache();
-
+        public ObservableCollection<PictureInfo> ListOfPictures = new ObservableCollection<PictureInfo>();
+        private const int MaxFilesInDeleteHistory = 5;
+        private readonly List<PictureInfo> DeletedPictures = new List<PictureInfo>();
+        
         public MainPage()
         {
             this.InitializeComponent();
@@ -57,89 +60,57 @@ namespace viehstall
         private void FlipView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             Debug.WriteLine("BEGIN FlipView_SelectionChanged: {0}", MyFlipView.SelectedIndex);
+            if (MyFlipView.SelectedIndex < 0)
+                return;
+            double percent = 100.0 * MyFlipView.SelectedIndex / ListOfPictures.Count;
+            MyInfoText.Text = string.Format("Image {0:000} of {1:000} ({2:00.00}%), Delete-Cache: {3:00}",
+                MyFlipView.SelectedIndex + 1,
+                ListOfPictures.Count,
+                percent,
+                DeletedPictures.Count);
+
             Debug.Assert(sender == MyFlipView);
             var flipViewItem = MyFlipView.ContainerFromIndex(MyFlipView.SelectedIndex);
             ResizeImageToFit(FindFirstElementInVisualTree<ScrollViewer>(flipViewItem));
-            Debug.WriteLine("END FlipView_SelectionChanged");
+            MyAppBar.IsEnabled = true;
         }
 
         private async void MainPage_Loaded(object sender, RoutedEventArgs e)
         {
-            await MyPictureCache.SwitchToFolder(@"C:\Users\Gerson\Pictures\Test\1");
-            MyFlipView.ItemsSource = MyPictureCache.ListOfPictures;
+            await SwitchToFolder(@"C:\Users\Gerson\Pictures\Test\1");
+
+            await Task.Delay(250);
+            FlipView_SelectionChanged(MyFlipView, null);
         }
         
-/*
         private async Task<bool> PhysicallyDeleteThisFile(string filename)
         {
             try
             {
-                string pathName = Path.Combine(CurrentDirectory, filename);
-
-                var storageFile = await StorageFile.GetFileFromPathAsync(pathName);
+                Debug.WriteLine("Physically delete {0}", filename);
+                var storageFile = await StorageFile.GetFileFromPathAsync(filename);
                 await storageFile.DeleteAsync();
                 return true;
             }
             catch (Exception)
             {
+                Debug.WriteLine("Sorry, unable to delete {0}", filename);
                 return false;
             }
         }
 
-        private async void DeleteCurrentFileAndGoToNextOne()
-        {
-            // it could be that you want to delete a file that doesn't exist any more 
-            // (for example, you were already down to the last picture, and there was nothing to delete)
-
-            FilesToDelete.Insert(0, Filenames[CurrentIndex]);
-            Filenames.RemoveAt(CurrentIndex);
-
-            // if we have just removed the last file in the list, we need to correct our index
-            Debug.Assert(CurrentIndex >= 0);
-            if (CurrentIndex == Filenames.Count)
-            {
-                --CurrentIndex;
-                // if we have just removed the last file in the whole directory, we are in a bit of trouble...
-                if (CurrentIndex < 0)
-                {
-                    ShowErrorMessage("Do you really want to delete the last file in a directory?");
-                    return;
-                }
-            }
-            await ShowCurrentImage();
-            if (FilesToDelete.Count > MaxFilesInDeleteHistory)
-            {
-                await PhysicallyDeleteThisFile(FilesToDelete[MaxFilesInDeleteHistory - 1]);
-                FilesToDelete.RemoveAt(MaxFilesInDeleteHistory - 1);
-            }
-        }*/
-
-        private async void Button_Click(object sender, RoutedEventArgs e)
-        {
-            
-            var folderPicker = new FolderPicker();
-            folderPicker.FileTypeFilter.Add(".jpg");
-            folderPicker.ViewMode = PickerViewMode.Thumbnail;
-            folderPicker.SuggestedStartLocation = PickerLocationId.PicturesLibrary;
-            folderPicker.SettingsIdentifier = "FolderPicker";
-
-            var folder = await folderPicker.PickSingleFolderAsync();
-            await MyPictureCache.SwitchToFolder(folder);
-        }
-
-        private Rect Scale;
-        bool IsInitialized = false;
-        
         private void DelayedResizeImageToFit(ScrollViewer sv)
         {
+            Debug.WriteLine("DelayedResizeImageToFit called");
+
             var image = FindFirstElementInVisualTree<Image>(sv);
             if (image == null)
-                return;
-
-            if (!IsInitialized)
             {
-                Scale = Window.Current.Bounds;
+                Debug.WriteLine("DelayedResizeImageToFit aborts, because image is null");
+                return;
             }
+                
+            var Scale = Window.Current.Bounds;
 
             double factor = 1.0;
             if (Scale.Width > Scale.Height)
@@ -165,6 +136,11 @@ namespace viehstall
                     sv.ChangeView(1.0f, 1.0f, f, true);
                 }
             }
+            else
+            {
+                Debug.WriteLine("DelayedResizeImageToFit does nothing, image size is not valid yet");
+
+            }
         }
 
         private void ResizeImageToFit(ScrollViewer sv)
@@ -187,5 +163,49 @@ namespace viehstall
         {
             ResizeImageToFit(sender as ScrollViewer);
         }
+
+        public async Task<bool> SwitchToFolder(string directory)
+        {
+            return await SwitchToFolder(await StorageFolder.GetFolderFromPathAsync(directory));
+        }
+
+        public async Task<bool> SwitchToFolder(StorageFolder folder)
+        {
+            var items = new ObservableCollection<PictureInfo>();
+            foreach (StorageFile file in await folder.GetFilesAsync())
+            {
+                items.Add(new PictureInfo(file.Path));
+            }
+            ListOfPictures = items;
+            MyFlipView.ItemsSource = items;
+            return true;
+        }
+        private async void ChangeFolder_Click(object sender, RoutedEventArgs e)
+        {
+
+            var folderPicker = new FolderPicker();
+            folderPicker.FileTypeFilter.Add(".jpg");
+            folderPicker.ViewMode = PickerViewMode.Thumbnail;
+            folderPicker.SuggestedStartLocation = PickerLocationId.PicturesLibrary;
+            folderPicker.SettingsIdentifier = "FolderPicker";
+
+            var folder = await folderPicker.PickSingleFolderAsync();
+            await SwitchToFolder(folder);
+        }
+
+        private async void DeleteButton_Click(object sender, RoutedEventArgs e)
+        {
+            int index = MyFlipView.SelectedIndex;
+            PictureInfo pi = ListOfPictures[index];
+            DeletedPictures.Insert(0, pi);
+            ListOfPictures.RemoveAt(index);
+            if (DeletedPictures.Count > MaxFilesInDeleteHistory)
+            {
+                await PhysicallyDeleteThisFile(DeletedPictures[MaxFilesInDeleteHistory].Filename);
+                DeletedPictures.RemoveAt(MaxFilesInDeleteHistory);
+            }
+        }
+
+
     }
 }

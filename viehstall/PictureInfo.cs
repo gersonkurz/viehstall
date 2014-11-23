@@ -13,19 +13,10 @@ using System.Threading.Tasks;
 
 namespace viehstall
 {
-    public enum LoadState
-    {
-        IsLoading,
-        IsLoaded,
-        WasLoaded,
-        WasNotLoaded
-    }
-
     public class PictureInfo : BindableBase
     {
-        private readonly string Filename;
+        internal readonly string Filename;
         internal BitmapImage PictureInMemory;
-        private string _Description;
         private Task<bool> Loader;
 
         public BitmapImage Picture
@@ -49,21 +40,9 @@ namespace viehstall
             }
         }
 
-        public PictureInfo(string filename, int index)
+        public PictureInfo(string filename)
         {
             Filename = filename;
-            _Description = string.Format("{0}: not loaded yet", filename);
-        }
-
-        public string Description
-        {
-            get {
-                return _Description;
-            }
-            set
-            {
-                SetProperty(ref _Description, value);
-            }
         }
 
         private async Task<bool> LoadPictureAsync()
@@ -75,7 +54,6 @@ namespace viehstall
             await picture.SetSourceAsync(stream);
             Picture = picture;
             Loader = null;
-            Description = string.Format("{0}: {1} x {2}", Filename, picture.PixelWidth, picture.PixelHeight);
             return true;
         }
     }

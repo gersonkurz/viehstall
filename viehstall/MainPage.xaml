@@ -8,29 +8,34 @@
     mc:Ignorable="d"
     >
     <Page.BottomAppBar>
-        <AppBar>
-
+        <AppBar Name="MyAppBar">
             <StackPanel Orientation="Horizontal">
-                <Button Style="{StaticResource OpenLocalAppBarButtonStyle}" Content="&#xE197;" Click="Button_Click"/>
+                <Button Style="{StaticResource OpenLocalAppBarButtonStyle}" Content="&#xE197;" Click="ChangeFolder_Click"/>
             </StackPanel>
         </AppBar>
     </Page.BottomAppBar>
-    <FlipView x:Name="MyFlipView" SelectionChanged="FlipView_SelectionChanged">
-        <FlipView.ItemTemplate>
-            <DataTemplate>
-                <Grid>
+    <Grid>
+        <FlipView x:Name="MyFlipView" SelectionChanged="FlipView_SelectionChanged">
+            <FlipView.ItemTemplate>
+                <DataTemplate>
                     <ScrollViewer HorizontalAlignment="Center"
                                   VerticalAlignment="Center"
                                   HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Auto"
+                                  ZoomMode="Enabled"
+                                  MaxZoomFactor="10.0"
+                                  MinZoomFactor="0.2"
                                   DoubleTapped="ScrollViewer_DoubleTapped">
                         <Image Source="{Binding Picture}" />
                     </ScrollViewer>
-                    <Border Background="#A5000000" Height="60" VerticalAlignment="Bottom">
-                        <TextBlock Text="{Binding Description}" FontSize="24" Foreground="#CCFFFFFF" Padding="15,20"/>
-                    </Border>
-                </Grid>
-            </DataTemplate>
-        </FlipView.ItemTemplate>
-    </FlipView>
+                </DataTemplate>
+            </FlipView.ItemTemplate>
+        </FlipView>
+        <Border Background="#88000000" Height="85" VerticalAlignment="Bottom">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource DeleteAppBarButtonStyle}" Content="&#xE106;" Click="DeleteButton_Click"/>
+                <TextBlock Name="MyInfoText" VerticalAlignment="Bottom" FontSize="20" Foreground="#CCFFFFFF" Padding="5,5"/>
+            </StackPanel>
+        </Border>
+    </Grid>
 </Page>
