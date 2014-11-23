@@ -21,9 +21,29 @@
 
             <FlipView.ItemTemplate>
                 <DataTemplate>
-                    <Grid>
-                        <Image Source="{Binding Picture}" Stretch="Uniform"/>
-                    </Grid>
+                    <ScrollViewer 
+                        DoubleTapped="ScrollViewer_DoubleTapped"
+                        ZoomMode="Enabled" 
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        MinZoomFactor="0.1"
+                        MaxZoomFactor="5.0"
+                        Margin="0"
+                        VerticalScrollBarVisibility="Auto" 
+                        HorizontalScrollBarVisibility="Auto">
+                        <Grid>
+                            <Image Source="{Binding Picture}" 
+                                   Stretch="Uniform" 
+                                   Width="{Binding ActualWidth, ElementName=Picture}"
+                                   Height="{Binding ActualHeight, ElementName=Picture}"
+                                   VerticalAlignment="Center" 
+                                   HorizontalAlignment="Center"/>
+                            <Border Background="#A5000000" Height="60" VerticalAlignment="Bottom">
+                                <TextBlock Name="MyInfoText" Text="Hello, World" FontSize="24" Foreground="#CCFFFFFF" Padding="15,20"/>
+                            </Border>
+                        </Grid>
+                        
+                    </ScrollViewer>
                 </DataTemplate>
             </FlipView.ItemTemplate>
 
