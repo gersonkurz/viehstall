@@ -24,9 +24,7 @@
                                   HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Auto"
                                   DoubleTapped="ScrollViewer_DoubleTapped">
-                        <Image Source="{Binding Picture}" 
-                                    VerticalAlignment="Center" 
-                                    HorizontalAlignment="Center"/>
+                        <Image Source="{Binding Picture}" />
                     </ScrollViewer>
                     <Border Background="#A5000000" Height="60" VerticalAlignment="Bottom">
                         <TextBlock Text="{Binding Description}" FontSize="24" Foreground="#CCFFFFFF" Padding="15,20"/>

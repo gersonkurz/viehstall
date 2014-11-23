@@ -54,18 +54,12 @@ namespace viehstall
             return null;
         }
 
-        private async void FlipView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void FlipView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            Debug.WriteLine("BEGIN FlipView_SelectionChanged");
+            Debug.WriteLine("BEGIN FlipView_SelectionChanged: {0}", MyFlipView.SelectedIndex);
             Debug.Assert(sender == MyFlipView);
-            await MyPictureCache.GoTo(MyFlipView.SelectedIndex);
-
-
-            for(int i = MyPictureCache.CacheWindowStart; i < MyPictureCache.CacheWindowEnd; ++i )
-            {
-                var flipViewItem = MyFlipView.ContainerFromIndex(i);
-                ResizeImageToFit(FindFirstElementInVisualTree<ScrollViewer>(flipViewItem));
-            }
+            var flipViewItem = MyFlipView.ContainerFromIndex(MyFlipView.SelectedIndex);
+            ResizeImageToFit(FindFirstElementInVisualTree<ScrollViewer>(flipViewItem));
             Debug.WriteLine("END FlipView_SelectionChanged");
         }
 
@@ -133,51 +127,65 @@ namespace viehstall
             await MyPictureCache.SwitchToFolder(folder);
         }
 
-        private void ResizeImageToFit(ScrollViewer sv)
+        private Rect Scale;
+        bool IsInitialized = false;
+        
+        private void DelayedResizeImageToFit(ScrollViewer sv)
         {
-            if (sv == null)
-                return;
-
             var image = FindFirstElementInVisualTree<Image>(sv);
             if (image == null)
                 return;
 
-            var scale = Window.Current.Bounds;
-            double factor = 1.0;
-            if (scale.Width > scale.Height)
+            if (!IsInitialized)
             {
-                if (image.ActualWidth > scale.Width)
-                {
-                    factor = scale.Height / image.ActualHeight;
-                }
-                else
-                {
-                    factor = image.ActualHeight / scale.Height;
-                }
+                Scale = Window.Current.Bounds;
+            }
+
+            double factor = 1.0;
+            if (Scale.Width > Scale.Height)
+            {
+                factor = Scale.Height / image.ActualHeight;
             }
             else
             {
-                if (image.ActualHeight > scale.Height)
-                {
-                    factor = scale.Width / image.ActualWidth;
-                }
-                else
-                {
-                    factor = image.ActualWidth / scale.Width;
-                }
+                factor = Scale.Width / image.ActualWidth;
             }
-            float f = (float)factor;
-            if( f != sv.ZoomFactor)
+            if ((image.ActualHeight > 0) && (image.ActualHeight > 0))
             {
-                sv.ZoomToFactor((float)factor);
+                Debug.WriteLine("image: {0:0000.00} x {1:0000.00}, Screen: {2:0000.00} x {3:0000.00}, Zoom:{4:0000.00}",
+                    image.ActualWidth,
+                    image.ActualHeight,
+                    Scale.Width,
+                    Scale.Height,
+                    factor);
+
+                float f = (float)factor;
+                if (f != sv.ZoomFactor)
+                {
+                    sv.ChangeView(1.0f, 1.0f, f, true);
+                }
             }
+        }
+
+        private void ResizeImageToFit(ScrollViewer sv)
+        {
+            if (sv == null)
+                return;
+            
+            var period = TimeSpan.FromMilliseconds(10);
+            Windows.System.Threading.ThreadPoolTimer.CreateTimer(async (source) =>
+            {
+                await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, () =>
+                {
+                    DelayedResizeImageToFit(sv);
+                });
+            }, period);
+                
         }
 
         private void ScrollViewer_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
         {
-            Debug.WriteLine("BEGIN ScrollViewer_DoubleTapped");
             ResizeImageToFit(sender as ScrollViewer);
-            Debug.WriteLine("END ScrollViewer_DoubleTapped");
         }
     }
 }
