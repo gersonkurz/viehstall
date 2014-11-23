@@ -7,10 +7,6 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     >
-
-    <Page.Resources>
-    </Page.Resources>
-
     <Page.BottomAppBar>
         <AppBar>
 
@@ -21,21 +17,17 @@
     </Page.BottomAppBar>
 
     <Grid Background="{StaticResource ApplicationPageBackgroundThemeBrush}">
-        <Image x:Name="MyImage" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        <TextBlock x:Name="ImageInfo" 
-                   Text="Hello, World" 
-                   FontSize="11"
-                   HorizontalAlignment="Right"
-                   VerticalAlignment="Bottom"
-                   Margin="20"/>
-        <TextBlock x:Name="ImageError"
-                   Text="Sorry, end of the line for you: this directory is now empty" 
-                   Foreground="Red" 
-                   FontSize="24"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   Visibility="Collapsed"
-                   Margin="20"/>
+        <FlipView x:Name="MyFlipView" SelectionChanged="FlipView_SelectionChanged">
+
+            <FlipView.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Image Source="{Binding Picture}" Stretch="Uniform"/>
+                    </Grid>
+                </DataTemplate>
+            </FlipView.ItemTemplate>
+
+        </FlipView>
     </Grid>
 
 

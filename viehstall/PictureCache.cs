@@ -10,26 +10,36 @@ using System.Diagnostics;
 using Windows.Storage.Pickers;
 using Windows.UI.Xaml.Media.Imaging;
 using System.Threading.Tasks;
+using System.Collections.ObjectModel;
 
 namespace viehstall
 {
-    public class PictureCache
+    public class PictureCache : BindableBase
     {
-        private readonly List<PictureInfo> Pictures = new List<PictureInfo>();
+        private ObservableCollection<PictureInfo> _pictures = new ObservableCollection<PictureInfo>();
+
+        public ObservableCollection<PictureInfo> ListOfPictures
+        {
+            get { return this._pictures; }
+            set { this.SetProperty(ref this._pictures, value); }
+        }
+
         private int CurrentIndex = -1;
         private int CacheWindowStart = -1;
         private int CacheWindowEnd = -1;
-        private Image Image;
-        private const int CACHE_WINDOW_SIZE = 10;
+        private const int CACHE_WINDOW_SIZE = 8;
 
-        public PictureCache(Image image)
+        public async Task<bool> GoTo(int newIndex)
         {
-            Image = image;
-        }
-
-        private async Task<bool> MoveCacheWindowAndRefreshDisplay(int newIndex)
-        { 
-            StringWriter output = new StringWriter();
+            
+            Debug.WriteLine("GoTo: {0}", newIndex);
+            if (newIndex < 0)
+                newIndex = 0;
+            if (newIndex == CurrentIndex)
+            {
+                Debug.WriteLine("- already there, nothing to do!");
+                return true;
+            }
 
             // if new index is completely outside the range of the cache window, we must invalidate it all and rebuild it
             Debug.Assert(CacheWindowStart >= 0);
@@ -38,93 +48,87 @@ namespace viehstall
             const int halfWindowSize = CACHE_WINDOW_SIZE / 2;
             int newCacheStart = newIndex - halfWindowSize;
             int newCacheEnd = newIndex + halfWindowSize;
-            if(newCacheStart < 0)
+            if (newCacheStart < 0)
             {
                 newCacheStart = 0;
                 newCacheEnd = CACHE_WINDOW_SIZE;
             }
-            if(newCacheEnd > (Pictures.Count-1))
+            if (newCacheEnd > (ListOfPictures.Count - 1))
             {
-                newCacheEnd = Pictures.Count-1;
+                newCacheEnd = ListOfPictures.Count - 1;
             }
 
             // ensure new cache window is starting to load
             for (int index = newCacheStart; index < newCacheEnd; ++index)
             {
-                LoadState state = Pictures[index].StartLoading();
+                LoadState state = ListOfPictures[index].StartLoading();
             }
 
             // invalidate old cache that is outside of our range
+            bool needCollect = false;
             for (int index = CacheWindowStart; index < CacheWindowEnd; ++index)
             {
-                if( (index < newCacheStart) || (index >= newCacheEnd) )
+                if ((index < newCacheStart) || (index >= newCacheEnd))
                 {
-                    LoadState state = Pictures[index].ReleaseCachedImage();
+                    LoadState state = ListOfPictures[index].ReleaseCachedImage();
+                    if(state == LoadState.WasLoaded)
+                    {
+
+                        needCollect = true;
+                    }
+                    
                 }
             }
+            if(needCollect)
+            GC.Collect();
             CacheWindowStart = newCacheStart;
             CacheWindowEnd = newCacheEnd;
             CurrentIndex = newIndex;
-            Debug.WriteLine(output);
-            await RefreshDisplay();
-            return true;
+            return await ListOfPictures[CurrentIndex].EnsurePictureIsLoaded();
         }
 
         public async void GoToPrevious()
         {
-            if (Pictures.Count > 0)
+            if (ListOfPictures.Count > 0)
             {
                 if (CurrentIndex > 0)
                 {
-                    await MoveCacheWindowAndRefreshDisplay(CurrentIndex-1);
+                    await GoTo(CurrentIndex-1);
                 }
             }
         }
 
         public async void GoToNext()
         {
-            if (Pictures.Count > 0)
+            if (ListOfPictures.Count > 0)
             {
-                if (CurrentIndex < (Pictures.Count - 1))
+                if (CurrentIndex < (ListOfPictures.Count - 1))
                 {
-                    await MoveCacheWindowAndRefreshDisplay(CurrentIndex+1);
+                    await GoTo(CurrentIndex + 1);
                 }
             }
         }
 
         public async void GoToFirst()
         {
-            if (Pictures.Count > 0)
+            if (ListOfPictures.Count > 0)
             {
                 if (CurrentIndex != 0)
                 {
-                    await MoveCacheWindowAndRefreshDisplay(0);
+                    await GoTo(0);
                 }
             }
         }
-        
+
         public async void GoToLast()
         {
-            if (Pictures.Count > 0)
+            if (ListOfPictures.Count > 0)
             {
-                if (CurrentIndex < (Pictures.Count - 1))
+                if (CurrentIndex < (ListOfPictures.Count - 1))
                 {
-                    await MoveCacheWindowAndRefreshDisplay(Pictures.Count - 1);
+                    await GoTo(ListOfPictures.Count - 1);
                 }
             }
-        }
-
-        TimeSpan TotalTimeSpent;
-        int RefreshDisplayCount = 0;
-
-        private async Task<bool> RefreshDisplay()
-        {
-            DateTime start = DateTime.Now;
-            Image.Source = await Pictures[CurrentIndex].GetPicture();
-            TimeSpan elapsed = DateTime.Now - start;
-            TotalTimeSpent += elapsed;
-            ++RefreshDisplayCount;
-            return true;
         }
 
         public async Task<bool> SwitchToFolder(string directory)
@@ -134,36 +138,26 @@ namespace viehstall
 
         public async Task<bool> SwitchToFolder(StorageFolder folder)
         {
-            Image.Source = null;
-
-            DateTime t0 = DateTime.Now;
-
-            // this implicitly also clears the cache
-            Pictures.Clear();
+            Debug.WriteLine("-- BEGIN SwitchToFolder: {0}", folder);
+            ListOfPictures.Clear();
             int index = 0;
             CacheWindowStart = 0;
             CacheWindowEnd = CACHE_WINDOW_SIZE - 1;
 
             foreach (StorageFile file in await folder.GetFilesAsync())
             {
-                PictureInfo pi = new PictureInfo(file.Path);
+                PictureInfo pi = new PictureInfo(file.Path, index);
                 if (index < CACHE_WINDOW_SIZE)
                 {
                     pi.StartLoading();
                 }
-                Pictures.Add(pi);
+                ListOfPictures.Add(pi);
                 ++index;
             }
-            Debug.WriteLine("Time to startup with cache: {0}", DateTime.Now - t0);
-            if (index > 0)
-            {
-                CurrentIndex = 0;
-                return await RefreshDisplay();
-            }
-            else
-            {
-                return false;
-            }
+            CurrentIndex = 0;
+            await ListOfPictures[0].EnsurePictureIsLoaded();
+            Debug.WriteLine("-- END SwitchToFolder: {0} has {1} items", folder, ListOfPictures.Count);
+            return true;
         }
 
 

@@ -15,95 +15,24 @@ namespace viehstall
 {
     public sealed partial class MainPage : Page
     {
-        private PictureCache Pictures;
-        private readonly GestureHandling GestureHandling;
+        public PictureCache MyPictureCache = new PictureCache();
 
         public MainPage()
         {
             this.InitializeComponent();
             this.Loaded += MainPage_Loaded;
-            GestureHandling = new GestureHandling(this);
-            GestureHandling.DownSwipe += GestureHandling_DownSwipe;
-            GestureHandling.LeftSwipe += GestureHandling_LeftSwipe;
-            GestureHandling.RightSwipe += GestureHandling_RightSwipe;
-            GestureHandling.UpSwipe += GestureHandling_UpSwipe;
         }
 
-        protected override void OnNavigatedTo(NavigationEventArgs e)
+        private async void FlipView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            Window.Current.CoreWindow.KeyDown += CoreWindow_KeyDown;
-            base.OnNavigatedTo(e);
-        }
-
-        void CoreWindow_KeyDown(Windows.UI.Core.CoreWindow sender, Windows.UI.Core.KeyEventArgs args)
-        {
-            if (args.VirtualKey == VirtualKey.Left)
-            {
-                Pictures.GoToPrevious();
-            }
-            else if (args.VirtualKey == VirtualKey.Right)
-            {
-                Pictures.GoToNext();
-            }
-            else if (args.VirtualKey == VirtualKey.Home)
-            {
-                Pictures.GoToFirst();
-            }
-            else if (args.VirtualKey == VirtualKey.End)
-            {
-                Pictures.GoToLast();
-            }
-            else if (args.VirtualKey == VirtualKey.D)
-            {
-                //DeleteCurrentFileAndGoToNextOne();
-            }
-        }
-
-        protected override void OnNavigatedFrom(NavigationEventArgs e)
-        {
-            Window.Current.CoreWindow.KeyDown -= CoreWindow_KeyDown;
-            base.OnNavigatedTo(e);
-        }
-
-        private void GestureHandling_DownSwipe()
-        {
-            //DeleteCurrentFileAndGoToNextOne();
-        }
-
-        private void GestureHandling_LeftSwipe()
-        {
-            Pictures.GoToNext();
-        }
-
-        private void GestureHandling_RightSwipe()
-        {
-            Pictures.GoToPrevious();
-        }
-
-        private void GestureHandling_UpSwipe()
-        {
-            Pictures.GoToPrevious();
+            await MyPictureCache.GoTo(MyFlipView.SelectedIndex);
         }
 
         private async void MainPage_Loaded(object sender, RoutedEventArgs e)
         {
-            Pictures = new PictureCache(MyImage);
-            await Pictures.SwitchToFolder(@"C:\Users\Gerson\Pictures\Wallpapers");
+            await MyPictureCache.SwitchToFolder(@"C:\Users\Gerson\Pictures\Wallpapers");
+            MyFlipView.ItemsSource = MyPictureCache.ListOfPictures;
         }
-
-        private void ClearErrorMessage()
-        {
-            ImageError.Visibility = Visibility.Collapsed;
-        }
-
-        private void ShowErrorMessage(string msg, params object[] args)
-        {
-            ImageError.Text = string.Format(msg, args);
-            ImageError.Visibility = Visibility.Visible;
-        }
-
-        
-
         
 /*
         private async Task<bool> PhysicallyDeleteThisFile(string filename)
@@ -160,7 +89,7 @@ namespace viehstall
             folderPicker.SettingsIdentifier = "FolderPicker";
 
             var folder = await folderPicker.PickSingleFolderAsync();
-            await Pictures.SwitchToFolder(folder);
+            await MyPictureCache.SwitchToFolder(folder);
         }
     }
 }
