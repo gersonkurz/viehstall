@@ -15,9 +15,7 @@ namespace viehstall
 {
     public sealed partial class MainPage : Page
     {
-        private readonly BitmapCache Images = new BitmapCache();
-        private int CurrentIndex;
-
+        private PictureCache Pictures;
         private readonly GestureHandling GestureHandling;
 
         public MainPage()
@@ -41,19 +39,19 @@ namespace viehstall
         {
             if (args.VirtualKey == VirtualKey.Left)
             {
-                GoToPreviousPicture();
+                Pictures.GoToPrevious();
             }
             else if (args.VirtualKey == VirtualKey.Right)
             {
-                GoToNextPicture();
+                Pictures.GoToNext();
             }
             else if (args.VirtualKey == VirtualKey.Home)
             {
-                GoToFirstPicture();
+                Pictures.GoToFirst();
             }
             else if (args.VirtualKey == VirtualKey.End)
             {
-                GoToLastPicture();
+                Pictures.GoToLast();
             }
             else if (args.VirtualKey == VirtualKey.D)
             {
@@ -74,42 +72,23 @@ namespace viehstall
 
         private void GestureHandling_LeftSwipe()
         {
-            GoToNextPicture();
+            Pictures.GoToNext();
         }
 
         private void GestureHandling_RightSwipe()
         {
-            GoToPreviousPicture();
+            Pictures.GoToPrevious();
         }
 
         private void GestureHandling_UpSwipe()
         {
-            GoToPreviousPicture();
+            Pictures.GoToPrevious();
         }
 
         private async void MainPage_Loaded(object sender, RoutedEventArgs e)
         {
-            await SwitchToFolder(await StorageFolder.GetFolderFromPathAsync(@"C:\Users\Gerson\Pictures\Wallpapers"));
-        }
-
-        private async Task<bool> SwitchToFolder(StorageFolder folder)
-        {
-            Images.Clear();
-            foreach (StorageFile file in await folder.GetFilesAsync())
-            {
-                Images.Add(file.Path);
-            }
-            if(Images.HasAny)
-            {
-                ClearErrorMessage();
-                CurrentIndex = 0;
-                return await ShowCurrentImage();
-            }
-            else
-            {
-                ShowErrorMessage("The directory '{0}' has no files", folder.Path);
-                return false;
-            }
+            Pictures = new PictureCache(MyImage);
+            await Pictures.SwitchToFolder(@"C:\Users\Gerson\Pictures\Wallpapers");
         }
 
         private void ClearErrorMessage()
@@ -123,67 +102,9 @@ namespace viehstall
             ImageError.Visibility = Visibility.Visible;
         }
 
-        private async Task<bool> ShowCurrentImage()
-        {
-            try
-            {
-                ClearErrorMessage();
-                MyImage.Source = await Images.GetBitmapAtIndex(CurrentIndex);
-            }
-            catch(Exception)
-            {
-                ShowErrorMessage("Unable to load current file... sorry!");
-                return false;
-            }
-            return true;
-        }
+        
 
-        private async void GoToPreviousPicture()
-        {
-            if (Images.HasAny)
-            {
-                if (CurrentIndex > 0)
-                {
-                    --CurrentIndex;
-                    await ShowCurrentImage();
-                }
-            }
-        }
-
-        private async void GoToNextPicture()
-        {
-            if (Images.HasAny)
-            {
-                if (CurrentIndex < (Images.Count - 1))
-                {
-                    ++CurrentIndex;
-                    await ShowCurrentImage();
-                }
-            }
-        }
-
-        private async void GoToFirstPicture()
-        {
-            if (Images.HasAny)
-            {
-                if (CurrentIndex != 0)
-                {
-                    CurrentIndex = 0;
-                    await ShowCurrentImage();
-                }
-            }
-        }
-        private async void GoToLastPicture()
-        {
-            if (Images.HasAny)
-            {
-                if (CurrentIndex < (Images.Count - 1))
-                {
-                    CurrentIndex = Images.Count - 1;
-                    await ShowCurrentImage();
-                }
-            }
-        }
+        
 /*
         private async Task<bool> PhysicallyDeleteThisFile(string filename)
         {
@@ -239,7 +160,7 @@ namespace viehstall
             folderPicker.SettingsIdentifier = "FolderPicker";
 
             var folder = await folderPicker.PickSingleFolderAsync();
-            await SwitchToFolder(folder);
+            await Pictures.SwitchToFolder(folder);
         }
     }
 }
