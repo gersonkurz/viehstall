@@ -30,25 +30,30 @@
                 </DataTemplate>
             </FlipView.ItemTemplate>
         </FlipView>
-        <Border Background="#88000000" Height="35" VerticalAlignment="Bottom">
+        <Border Background="#88000000" Height="60" VerticalAlignment="Bottom">
             <StackPanel Orientation="Horizontal">
                     <Button 
+                        Width="100"
+                        Height="55"
                         Name="DeleteButton"
                         Content="Delete" 
                         Foreground="#88FFFFFF" 
                         Click="DeleteButton_Click"
-                        VerticalAlignment="Bottom" />
+                        VerticalAlignment="Center" />
                     <Button 
+                        Width="100"
+                        Height="55"
                         Name="UndoButton"
                         IsEnabled="False"
                         Content="Undo" 
                         Foreground="#88FFFFFF" 
                         Click="UndoButton_Click"
-                        VerticalAlignment="Bottom" />
+                        VerticalAlignment="Center" />
                     <TextBlock 
                         Name="MyInfoText" 
-                        VerticalAlignment="Bottom" 
+                        VerticalAlignment="Center" 
                         FontSize="20" 
+                        FontStretch="Condensed"
                         Foreground="#88FFFFFF" 
                         Padding="5,5"/>
             </StackPanel>

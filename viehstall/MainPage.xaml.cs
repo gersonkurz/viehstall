@@ -205,7 +205,14 @@ namespace viehstall
             var folder = await folderPicker.PickSingleFolderAsync();
             if (folder != null)
             {
-                await SwitchToFolder(folder);
+                if( await SwitchToFolder(folder) )
+                {
+                    while (DeletedPictures.Count > 0)
+                    {
+                        await PhysicallyDeleteThisFile(DeletedPictures[0].Filename);
+                        DeletedPictures.RemoveAt(0); 
+                    }
+                }
             }
         }
 
